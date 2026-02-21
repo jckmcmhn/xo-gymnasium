@@ -34,31 +34,29 @@ print("""
 
 
 if p == -1:
-    turns_taken = 0
+    turn = 1
     print("You are going first")
     m = input("Input your move: ")
     try:
         if m == "q":
             exit()
 
-        state, status = make_player_action(p,state,m,turns_taken)
-        turns_taken += 1
+        state, status = make_player_action(p,state,m,turn)
         print("The Computer is making its first move")
-        state, status, m = make_computer_action(state,turns_taken,1)
-        turns_taken += 1
+        turn += 1
+        state, status, m = make_computer_action(state,turn,1)
     except (ValueError, KeyError) as e:
             print("An error occurred, try again")
 
 if p == 1:
-    turns_taken = 0
+    turn = 1
     print("The Computer is going first")
-    state, status, m = make_computer_action(state,turns_taken,-1)
-    turns_taken = 1
+    state, status, m = make_computer_action(state,turn,-1)
 
 status = False
 winner = 0
 
-while turns_taken != 9 and status == 0:
+while turn != 9 and status == 0:
     print(f"Your move. Here is the board. You are {p_name} and The Computer is {c_name}")
 
     prettify_board(state)
@@ -69,8 +67,8 @@ while turns_taken != 9 and status == 0:
             m = input("Input your move: ")
             if m == "q":
                 exit()
-            state, status = make_player_action(p,state,m,turns_taken)
-            turns_taken += 1
+            turn += 1
+            state, status = make_player_action(p,state,m,turn)
             valid_action = True
             print("That's a valid move")
             prettify_board(state)
@@ -79,10 +77,10 @@ while turns_taken != 9 and status == 0:
                 winner = p
         except (ValueError, KeyError) as e:
             print("An error occurred, try again")
-    if turns_taken != 9 and status == 0:
+    if turn != 9 and status == 0:
         print("The computer's turn.")
-        state, status, m = make_computer_action(state,turns_taken,c)
-        turns_taken += 1
+        turn += 1
+        state, status, m = make_computer_action(state,turn,c)
         if status == True:
             print("\nOh no! The Computer won :(")
             winner = c

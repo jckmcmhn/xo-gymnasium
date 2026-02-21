@@ -1,136 +1,66 @@
-from typing import Optional
+
 import gymnasium as gym
 from gymnasium.utils.env_checker import check_env
 import numpy as np
-from xo import make_computer_action, check_for_winner
-import random
-import itertools
+from xo import XO, XOAgent
 
-class XO(gym.Env):
+import logging
 
-    def __init__(self):
+from tqdm import tqdm  # Progress bar
 
-        # Define what actions are available (9 squares)
-        self.action_space = gym.spaces.Discrete(9)
+logging.basicConfig(
+    format="{asctime} - {levelname} - {message}",
+    style="{",
+    datefmt="%Y-%m-%d %H:%M",
+    level="INFO")
 
-        # Define what the agent can observe
-        self.observation_space = gym.spaces.Dict(
-            {
-                "board": gym.spaces.Box(-1, 1, shape=(9,), dtype=int),
-            }
-        )
+# Training hyperparameters
+learning_rate = 0.01        # How fast to learn (higher = faster but less stable)
+n_episodes = 10000        # Number of games to play
+start_epsilon = 1.0         # Start with 100% random actions
+epsilon_decay = start_epsilon / (n_episodes / 2)  # Reduce exploration over time
+final_epsilon = 0.1         # Always keep some exploration
 
-#        self.observation_space = gym.spaces.Dict({"board": gym.spaces.Box(-1, 1, shape=(3, 3), dtype=int),})
+def test_agent(agent, env, num_episodes=100):
+    """Test agent performance without learning or exploration."""
+    total_rewards = []
 
-        self._action_to_move = {
-            0: [0, 0], # top left
-            1: [0, 1],  # top middle
-            2: [0, 2],  # top right
-            3: [1, 0],  # middle left
-            4: [1, 1],  # middle middle
-            5: [1, 2],  # middle right
-            6: [2, 0],  # bottom left
-            7: [2, 1],  # bottom middle
-            8: [2, 2],  # bottom right
-        }
+    # Temporarily disable exploration for testing
+    old_epsilon = agent.epsilon
+    agent.epsilon = 0.0  # Pure exploitation
+
+    for _ in range(num_episodes):
+        obs, info = env.reset()
+        episode_reward = 0
+        done = False
+
+        while not done:
+            action = agent.get_action(obs)
+            obs, reward, terminated, truncated, info = env.step(action)
+            episode_reward += reward
+            done = terminated or truncated
+
+        total_rewards.append(episode_reward)
+
+    # Restore original epsilon
+    agent.epsilon = old_epsilon
+
+    print(total_rewards)
+    win_draw_rate = np.mean(np.array(total_rewards) > 0)
+    win_rate = np.mean(np.array(total_rewards) == 2)
+    draw_rate = np.mean(np.array(total_rewards) == 1)
+    loss_rate = np.mean(np.array(total_rewards) < 0)
+    average_reward = np.mean(total_rewards)
+
+    print(f"Test Results over {num_episodes} episodes:")
+    print(f"Win or Draw Rate: {win_draw_rate:.1%}")
+    print(f"Win Rate: {win_rate:.1%}")
+    print(f"Draw Rate: {draw_rate:.1%}")
+    print(f"Bad play Rate: {loss_rate:.1%}")
+    print(f"Average Reward: {average_reward:.3f}")
+    print(f"Standard Deviation: {np.std(total_rewards):.3f}")
 
 
-    def _get_obs(self):
-        """Convert internal state to observation format.
-
-        Returns:
-            dict: Observation with the current board
-        """
-
-        #return {"board": self._board}
-        flat_board = np.array(list(itertools.chain.from_iterable(self._board)))
-        return {"board": flat_board}
-
-    def _get_info(self):
-        """Compute auxiliary information for debugging.
-
-        Returns:
-            dict: Info of how many turns have been taken
-        """
-        return {"turns_taken": self._turns_taken}
-    
-    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
-        """Start a new episode.
-
-        Args:
-            seed: Random seed for reproducible episodes
-            options: Additional configuration (unused in this example)
-
-        Returns:
-            tuple: (observation, info) for the initial state
-        """
-        # IMPORTANT: Must call this first to seed the random number generator
-        super().reset(seed=seed)
-
-        self._p = random.choice([-1,1])
-        if self._p == -1:
-            self._o = 1
-        else:
-            self._o = -1
-        self._board = np.array([[0,0,0],[0,0,0],[0,0,0]])
-        self._status = 0
-        self._turns_taken = 0
-
-        observation = self._get_obs()
-        info = self._get_info()
-
-        return observation, info
-    
-    def step(self, action):
-        """Execute one timestep within the environment.
-
-        Args:
-            action: The action to take (0-8 for moves)
-
-        Returns:
-            tuple: (observation, reward, terminated, truncated, info)
-        """
-        # Map the discrete action (0-8) to a position on the board
-        move = self._action_to_move[action]
-        # We don't use truncation in this simple environment
-        # (could add a step limit here if desired)
-        truncated = False
-
-        if self._board[move[0], move[1]] == 0:
-            # Any value other than 0 means agent has selected a move that is invalid
-
-            reward = 0 # Default reward is nothing
-            self._board[move[0], move[1]] = self._p
-            self._turns_taken += 1
-            terminated = False # default
-            # Check if agent reached the target
-            self._status = check_for_winner(self._board, self._turns_taken)
-            if self._status == 1:
-                terminated = True
-                reward = 2
-            elif self._status == 2:
-                # It's a stalemate
-                terminated = True
-                reward = 1
-
-            if not terminated:
-                self._turns_taken += 1
-                self._board, self._status, m = make_computer_action(self._board,self._turns_taken, self._o)
-                if self._status == 1:
-                    # Opponent has won
-                    terminated = True
-                    reward = -1
-
-            observation = self._get_obs()
-            info = self._get_info()
-        else:
-            # If the agent picked a square that is already taken, for now, let it pick another one, do not progress the game state
-            terminated = False
-            reward = 0
-            observation = self._get_obs()
-            info = self._get_info()
-
-        return observation, reward, terminated, truncated, info
     
 # Register the environment so we can create it with gym.make()
 gym.register(
@@ -142,17 +72,79 @@ gym.register(
 env = gym.make("gymnasium_env/xo-v0")
 
 # This will catch many common issues
-try:
-    #gym.utils.env_checker.check_env(env)
-    check_env(env)
-    print("Environment passes all checks!")
-except Exception as e:
-    print(f"Environment has issues: {e}")
+#try:
+#    #gym.utils.env_checker.check_env(env)
+#    check_env(env)
+#    print("Environment passes all checks!")
+#except Exception as e:
+#    print(f"Environment has issues: {e}")
 
 
-# Training hyperparameters
-learning_rate = 0.01        # How fast to learn (higher = faster but less stable)
-n_episodes = 400        # Number of hands to practice
-start_epsilon = 1.0         # Start with 100% random actions
-epsilon_decay = start_epsilon / (n_episodes / 2)  # Reduce exploration over time
-final_epsilon = 0.1         # Always keep some exploration
+# Then we reset this environment
+observation, info = env.reset()
+
+#for _ in range(9):
+#  action = env.action_space.sample()
+#  observation, reward, terminated, truncated, info = env.step(action)
+#  if terminated or truncated:
+#      # Reset the environment
+#      observation, info = env.reset()
+#      print("Environment is reset")
+
+#from stable_baselines3 import PPO
+#model = PPO('MlpPolicy', env, verbose=1)
+# Train the agent
+#model.learn(total_timesteps=int(2e3)) # 2e5
+#env.close()
+
+
+# Create environment and agent
+
+#env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=n_episodes)
+
+agent = XOAgent(
+    env=env,
+    learning_rate=learning_rate,
+    initial_epsilon=start_epsilon,
+    epsilon_decay=epsilon_decay,
+    final_epsilon=final_epsilon,
+)
+
+# Test the untrained agent
+#test_agent(agent, env, 100)
+
+
+for episode in tqdm(range(n_episodes)):
+    # Start a new hand
+    obs, info = env.reset()
+    logging.debug("Reset")
+    done = False
+
+    # Play one complete game
+    while not done:
+        # Agent chooses action (initially random, gradually more intelligent)
+        action = agent.get_action(obs)
+
+        # Take action and observe result
+        next_obs, reward, terminated, truncated, info = env.step(action)
+
+
+        # Learn from this experience
+        agent.update(obs, action, reward, terminated, next_obs)
+
+        # Move to next state
+        done = terminated or truncated
+        obs = next_obs
+
+    # Reduce exploration rate (agent becomes less random over time)
+    agent.decay_epsilon()
+
+logging.basicConfig(
+    format="{asctime} - {levelname} - {message}",
+    style="{",
+    datefmt="%Y-%m-%d %H:%M",
+    level="DEBUG")
+
+# Test your agent
+SHOW_BOARD = True
+test_agent(agent, env, 100)
