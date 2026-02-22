@@ -15,7 +15,7 @@ logging.basicConfig(
 
 # Training hyperparameters
 learning_rate = 0.01        # How fast to learn (higher = faster but less stable)
-n_episodes = 1#0000       # Number of games to play
+n_episodes = 30000       # Number of games to play
 start_epsilon = 1.0         # Start with 100% random actions
 epsilon_decay = start_epsilon / (n_episodes / 2)  # Reduce exploration over time
 final_epsilon = 0.3         # Always keep some exploration
@@ -76,29 +76,6 @@ gym.register(
 
 env = gym.make("gymnasium_env/xo-v0")
 
-# This will catch many common issues
-#try:
-#    #gym.utils.env_checker.check_env(env)
-#    check_env(env)
-#    print("Environment passes all checks!")
-#except Exception as e:
-#    print(f"Environment has issues: {e}")
-
-
-# Then we reset this environment
-observation, info = env.reset()
-
-#for _ in range(9):
-#  action = env.action_space.sample()
-#  observation, reward, terminated, truncated, info = env.step(action)
-#  if terminated or truncated:
-#      # Reset the environment
-#      observation, info = env.reset()
-#      print("Environment is reset")
-
-
-#env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=n_episodes)
-
 agent = XOAgent(
     env=env,
     learning_rate=learning_rate,
@@ -107,9 +84,18 @@ agent = XOAgent(
     final_epsilon=final_epsilon,
 )
 
+# This will catch many common issues
+#try:
+#    #gym.utils.env_checker.check_env(env)
+#    check_env(env)
+#    print("Environment passes all checks!")
+#except Exception as e:
+#    print(f"Environment has issues: {e}")
+
+#env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=n_episodes)
+
 # Test the untrained agent
 #test_agent(agent, env, 100)
-
 
 for episode in tqdm(range(n_episodes)):
     # Start a new hand
@@ -135,15 +121,8 @@ for episode in tqdm(range(n_episodes)):
     # Reduce exploration rate (agent becomes less random over time)
     agent.decay_epsilon()
 
-logging.basicConfig(
-    format="{asctime} - {levelname} - {message}",
-    style="{",
-    datefmt="%Y-%m-%d %H:%M",
-    level="DEBUG")
-
 # Test your agent
-
-test_agent(agent, env, 200)
+test_agent(agent, env, 400)
 
 df = pd.DataFrame(agent.q_values).transpose()
 print(len(df))
