@@ -62,18 +62,22 @@ def prettify_board(state, highlight = ""):
         print(vert)
     print("")
 
-def check_for_winner(b, tn):
+def check_for_winner(b, tn, simulator = False):
     """
     Docstring for check_for_winner
     
     :param b: The current board (state)
     :param tn: Turn number up to now
     """
-    logging.debug(f"Check for winner, this board {b}")
+    if simulator:
+        prefix = "Simulation: "
+    else:
+        prefix = ""
+    logging.debug(prefix + f"Check for winner, this board {b}")
     if tn < 5: # No one can win before the fifth turn
         return 0, ""
     else:
-        logging.debug(f"It's turn {tn}, someone can win now!")
+        logging.debug(prefix + f"It is turn {tn}, someone can win now!")
     if sum(b[0]) in [-3,3]: # is the first row a winner
         return 1, "r1"
     elif sum(b[1]) in [-3,3]: # is the second row a winner
@@ -92,9 +96,10 @@ def check_for_winner(b, tn):
         return 1, "d2"
 
     if tn == 9: #See TODO above
-        logging.debug(f"It is turn 9 and no one has won yet. So it's a draw")
+        logging.debug(prefix + f"It is turn 9 and no one has won yet. So it's a draw")
         return 2, "draw"
     else:
+        logging.debug(prefix + f"No one has won and it is not a draw")
         return 0, ""
     
 def make_action(p, state, mr, mc, tn):
@@ -124,54 +129,89 @@ def make_player_action(p,state,m,tn):
     state, status = make_action(p, state, mr, mc, tn)
     return state, status
    
-def check_for_winning_moves(state, tn, pm, p):
+def check_for_winning_moves(state, tn, pm, p, simulator = False):
     logging.debug("Running check for winning moves")
     for m in pm:
         mr, mc = m[0], m[1]
         spec_state = copy.deepcopy(state)
         spec_state[mr][mc] = p
-        status, description = check_for_winner(spec_state, tn)
-        if status >= 1: # Draw or win
-            return True, m, description
-    return False, m, ""
+        simulator = True
+        status, description = check_for_winner(spec_state, tn, simulator)
+        if status > 0: # Draw or win
+            return status, m, description
+    return 0, m, ""
 
 def assess_state(state, p, tn, check_both):
     if tn < 4: # No one can win or be one step away from winning before turn 4
-        return None
+        return 0, None
     if p == -1:
         o = 1
     else:
         o = -1
     pm = get_possible_actions(state)
-    winner, m, description = check_for_winning_moves(state, tn, pm, p)
-    if winner:
-        logging.debug(f"Found a winning move for {map_p[p]}: {m} which will deliver a {description} win")
-        return m
+    simulator = True
+    status, m, description = check_for_winning_moves(state, tn, pm, p, simulator)
+    if status > 0: # Win or draw
+        if status == 1:
+            logging.debug(f"Found a move for {map_p[p]}: {m} which will deliver a {description} win")
+        if status == 2:
+            logging.debug(f"Found a move for {map_p[p]}: {m} which will deliver a draw")
+        return status, m
     else:
         logging.debug(f"Could not find a winning move for {map_p[p]}")
         if check_both:
             if tn < 9:
                 logging.debug(f"Checking for move to block {map_p[o]}")
-                winner, m, description = check_for_winning_moves(state, tn + 1, pm, o)
-                if winner:
+                status, m, description = check_for_winning_moves(state, tn + 1, pm, o, simulator)
+                if status == 1:
+                    # Found a move which the opponent could use to win next turn
                     logging.debug(f"Found a move to block {map_p[o]}: {m} which would block a {description} win")
-                    return m
+                    return status, m
                 else:
                     logging.debug(f"Did not find a move to block a win from {map_p[o]}")
             else:
                 logging.debug(f"There is no need to check for blocking moves that {map_p[o]} can use against {map_p[p]} as this is the {tn} turn")
     logging.debug(f"Assess state for {map_p[o]} has concluded without making a recommendation")
-    return None
+    return 0, None
 
 def make_computer_action(state,tn,p):
+    logging.debug("Making computer action")
     pm = get_possible_actions(state)
     m = random.choice(pm) # This is the default action
-    new_m = assess_state(state, p, tn, True)
-    if new_m is not None:
+    status, new_m = assess_state(state, p, tn, True)
+    if status > 0:
         m = new_m
+    logging.debug(f"Computer action chosen {m}")
     state, status = make_action(p,state,m[0],m[1],tn)
     return state, status, m
 
+def opponent_logic_random(board, o, turn_number, terminated, reward):
+    logging.debug("Making random action")
+    pm = get_possible_actions(board)
+    m = random.choice(pm) # This is the default action
+    logging.debug(f"Random action chosen {m}")
+    board, status = make_action(o,board,m[0],m[1],turn_number)
+    if status == 1:
+        terminated = True
+        reward = -1
+    if status == 2:
+        terminated = True
+        reward = 1
+    return board, status, m, terminated, reward
+
+def opponent_logic_competitive(board, o, turn_number, terminated, reward):
+    print("competitive mode")
+    can_computer_win_or_draw, _ = assess_state(board, o, turn_number, False)
+    if can_computer_win_or_draw == 1:
+        #print(f"\n!! Computer ({map_p[self._o]}) won !!")
+        terminated = True
+        reward = -1
+    if can_computer_win_or_draw == 2:
+        #print(f"\n!! It's a draw !!")
+        terminated = True
+        reward = 1 # The computer played to a draw, which means the agent also played to a draw
+    board, status, m = make_computer_action(board, turn_number, o)
+    return board, status, m, terminated, reward
 
 class XO(gym.Env):
 
@@ -186,6 +226,8 @@ class XO(gym.Env):
                 "board": gym.spaces.Box(-1, 1, shape=(9,), dtype=int),
             }
         )
+
+        self.opponent_logic = opponent_logic_random
 
 
     def _get_obs(self):
@@ -257,9 +299,9 @@ class XO(gym.Env):
         terminated = False # default
         reward = 0 # Default reward is nothing
 
+        # Any value other than 0 means agent has selected a move that is invalid
         if self._board[move[0], move[1]] == 0:
-            self._turn_number += 1
-            # Any value other than 0 means agent has selected a move that is invalid
+            self._turn_number += 1    
             logging.debug(f"Turn {self._turn_number}, agent is playing as {map_p[self._p]}. Valid action selected: {action} which is {move}")
             self._board[move[0], move[1]] = self._p
             logging.debug(f"Action taken: {action} which is {move}. Turn number is {self._turn_number}")
@@ -281,12 +323,7 @@ class XO(gym.Env):
             if not terminated:
                 self._turn_number += 1
                 logging.debug(f"Turn {self._turn_number}: Computer ({map_p[self._o]}) is chosing an action")
-                can_computer_win_or_draw = assess_state(self._board, self._o, self._turn_number, False)
-                if can_computer_win_or_draw is not None:
-                    #print(f"\n!! Computer ({map_p[self._o]}) won !!")
-                    terminated = True
-                    reward = -1 # TODO: I think this means you'll get penalised if you let the opponent force you into a draw
-                self._board, self._status, m = make_computer_action(self._board,self._turn_number, self._o)
+                self._board, self._status, m, terminated, reward = self.opponent_logic(self._board, self._o, self._turn_number, terminated, reward)
                 logging.debug(f"Turn {self._turn_number}: Computer ({map_p[self._o]}) has taken this action {m}")
                 if SHOW_BOARD:
                     prettify_board(self._board)
@@ -351,22 +388,20 @@ class XOAgent:
         # With probability epsilon: explore (random action)
         board = obs["board"]
         if np.random.random() < self.epsilon:
-            #print(f"RANDOM {random.random()}")
+            logging.debug(f"RANDOM {random.random()}")
             while valid_action is False:
                 action = self.env.action_space.sample()
                 if board[action] == 0:
                     logging.debug("This random action is valid")
                     valid_action = True
                     return action
-            
+            #return self.env.action_space.sample()
 
         # With probability (1-epsilon): exploit (best known action)
         else:
             board_key = str(board)
-            # If all the q-values are 0 then it's possible for the the agent to get stuck suggesting the same invalid move until time runs out
-            # Because np.argmax always returns the first item in the list with the highest q-value, even if other actions with the same q-value exist
-            q_values = self.q_values[board_key]
-            #print(f"POLICY {random.random()}")
+            q_values = self.q_values[board_key] #TODO: I think this needs to be a copy, as otherwise the self.q_values table gets updated also, which feels a bit hack
+            logging.debug(f"POLICY {random.random()}")
             while valid_action is False:
                 action = int(np.argmax(q_values))
                 if board[action] == 0:
@@ -374,6 +409,7 @@ class XOAgent:
                     return action
                 else:
                     q_values[action] = -100
+            #return int(np.argmax(q_values))
 
 
     def update(
