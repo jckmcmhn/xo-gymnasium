@@ -20,7 +20,6 @@ def make_policy_action(state, tn, p):
     q_value = q_values.get(str(flat_board),None)
     print(q_value)
     if q_value is not None:
-        #if (max(q_value) != 0) and (min(q_value) != 0):
         if (max(q_value) == 0) and (len(set(q_value)) == 1):
             print(f"{flat_board} agent has no best option for this")
             pm = get_possible_actions(state)
@@ -39,7 +38,6 @@ if opponent == "rules":
     opponent_action = make_computer_action
 elif opponent == "agent":
     df = pd.read_csv("outfile.csv", index_col = "Unnamed: 0", float_precision='round_trip')
-    #q_values = defaultdict(lambda: np.zeros(9))
     q_values = {}
     for i, row in df.iterrows():
         q_values[i] = row.values
