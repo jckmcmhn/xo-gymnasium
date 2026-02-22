@@ -1,33 +1,45 @@
-from xo import make_player_action, make_computer_action, prettify_board, action_to_move, make_action, get_possible_actions
 import argparse
-import pandas as pd
-import numpy as np
 import itertools
+import numpy as np
+import pandas as pd
 import random
+from xo import make_player_action, make_computer_action, prettify_board, action_to_move, make_action, get_possible_actions
+from collections import defaultdict
+
+map = {"a1": "00", "a2": "01", "a3": "02", "b1": "10", "b2": "11", "b3": "12", "c1": "20", "c2": "21", "c3": "22"}
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--opponent", help = "what policy to play against", nargs='?', const="rules")
 args = parser.parse_args()
 opponent = args.opponent
 
-def make_policy_action(state, tt, p):
+def make_policy_action(state, tn, p):
     
     flat_board = np.array(list(itertools.chain.from_iterable(state)))
+    print(flat_board)
     q_value = q_values.get(str(flat_board),None)
+    print(q_value)
     if q_value is not None:
-        action = int(np.argmax(q_value))
-        m = action_to_move[action]
+        #if (max(q_value) != 0) and (min(q_value) != 0):
+        if (max(q_value) == 0) and (len(set(q_value)) == 1):
+            print(f"{flat_board} agent has no best option for this")
+            pm = get_possible_actions(state)
+            m = random.choice(pm)
+        else:
+            action = int(np.argmax(q_value))
+            m = action_to_move[action]
     else:
-        print("Congratulations! You've played a board that the agent has never seen before. The agent will now make a move at random")
+        print(f"Congratulations! You've played a board {flat_board} that the agent has never seen before. The agent will now make a move at random")
         pm = get_possible_actions(state)
         m = random.choice(pm)
-    state, status = make_action(p,state,m[0],m[1],tt)
+    state, status = make_action(p,state,m[0],m[1],tn)
     return state, status, m
 
 if opponent == "rules":
     opponent_action = make_computer_action
 elif opponent == "agent":
-    df = pd.read_csv("outfile.csv", index_col = "Unnamed: 0")
+    df = pd.read_csv("outfile.csv", index_col = "Unnamed: 0", float_precision='round_trip')
+    #q_values = defaultdict(lambda: np.zeros(9))
     q_values = {}
     for i, row in df.iterrows():
         q_values[i] = row.values
@@ -73,7 +85,7 @@ if p == -1:
     try:
         if m == "q":
             exit()
-
+        m = map[m]
         state, status = make_player_action(p,state,m,turn)
         print("The Computer is making its first move")
         turn += 1
@@ -100,15 +112,19 @@ while turn != 9 and status == 0:
             m = input("Input your move: ")
             if m == "q":
                 exit()
-            turn += 1
-            state, status = make_player_action(p,state,m,turn)
-            valid_action = True
-            print("That's a valid move")
-            prettify_board(state)
-            if status == True:
-                print("\nCongrats! You Won!")
-                winner = p
-        except (ValueError, KeyError) as e:
+            m = map[m]
+            if state[int(m[0])][int(m[1])] == 0:
+                valid_action = True    
+                turn += 1
+                state, status = make_player_action(p,state,m,turn)
+                print("That's a valid move")
+                prettify_board(state)
+                if status == True:
+                    print("\nCongrats! You Won!")
+                    winner = p
+            else:
+                print("Invalid input")
+        except (ValueError) as e:
             print("An error occurred, try again")
     if turn != 9 and status == 0:
         print("The computer's turn.")
