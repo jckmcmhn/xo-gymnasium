@@ -3,6 +3,7 @@ import gymnasium as gym
 from gymnasium.utils.env_checker import check_env
 import numpy as np
 from xo import XO, XOAgent
+import pandas as pd
 
 import logging
 
@@ -16,13 +17,14 @@ logging.basicConfig(
 
 # Training hyperparameters
 learning_rate = 0.01        # How fast to learn (higher = faster but less stable)
-n_episodes = 10000        # Number of games to play
+n_episodes = 5000       # Number of games to play
 start_epsilon = 1.0         # Start with 100% random actions
 epsilon_decay = start_epsilon / (n_episodes / 2)  # Reduce exploration over time
-final_epsilon = 0.1         # Always keep some exploration
+final_epsilon = 0.2         # Always keep some exploration
 
 def test_agent(agent, env, num_episodes=100):
     """Test agent performance without learning or exploration."""
+    # Based on https://gymnasium.farama.org/introduction/train_agent/#testing-your-trained-agent
     total_rewards = []
 
     # Temporarily disable exploration for testing
@@ -91,14 +93,6 @@ observation, info = env.reset()
 #      observation, info = env.reset()
 #      print("Environment is reset")
 
-#from stable_baselines3 import PPO
-#model = PPO('MlpPolicy', env, verbose=1)
-# Train the agent
-#model.learn(total_timesteps=int(2e3)) # 2e5
-#env.close()
-
-
-# Create environment and agent
 
 #env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=n_episodes)
 
@@ -146,5 +140,9 @@ logging.basicConfig(
     level="DEBUG")
 
 # Test your agent
-SHOW_BOARD = True
+
 test_agent(agent, env, 100)
+
+df = pd.DataFrame(agent.q_values).transpose()
+print(df)
+df.to_csv("outfile.csv")
