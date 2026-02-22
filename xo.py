@@ -8,6 +8,17 @@ from collections import defaultdict
 import gymnasium as gym
 import numpy as np
 
+action_to_move = { # Moved this out of the Class for now to make it calleable from elsewhere
+    0: [0, 0], # top left
+    1: [0, 1],  # top middle
+    2: [0, 2],  # top right
+    3: [1, 0],  # middle left
+    4: [1, 1],  # middle middle
+    5: [1, 2],  # middle right
+    6: [2, 0],  # bottom left
+    7: [2, 1],  # bottom middle
+    8: [2, 2],  # bottom right
+}
 
 logging.basicConfig(
     format="{asctime} - {levelname} - {message}",
@@ -152,7 +163,6 @@ def make_computer_action(state,tt,p):
     return state, status, m
 
 
-
 SHOW_BOARD = False #TODO: This should be a parameter
 
 class XO(gym.Env):
@@ -169,18 +179,6 @@ class XO(gym.Env):
             }
         )
 #        self.observation_space = gym.spaces.Dict({"board": gym.spaces.Box(-1, 1, shape=(3, 3), dtype=int),})
-
-        self.action_to_move = {
-            0: [0, 0], # top left
-            1: [0, 1],  # top middle
-            2: [0, 2],  # top right
-            3: [1, 0],  # middle left
-            4: [1, 1],  # middle middle
-            5: [1, 2],  # middle right
-            6: [2, 0],  # bottom left
-            7: [2, 1],  # bottom middle
-            8: [2, 2],  # bottom right
-        }
 
 
     def _get_obs(self):
@@ -241,7 +239,7 @@ class XO(gym.Env):
             tuple: (observation, reward, terminated, truncated, info)
         """
         # Map the discrete action (0-8) to a position on the board
-        move = self.action_to_move[action]
+        move = action_to_move[action]
         # We don't use truncation in this simple environment
         # (could add a step limit here if desired)
         truncated = False
@@ -260,11 +258,11 @@ class XO(gym.Env):
             self._status, _ = check_for_winner(self._board, self._turns_taken)
             logging.debug(f"Check for winner status is {self._status}")
             if self._status == 1:
-                print("\n!! Agent won !!")
+                #print("\n!! Agent won !!")
                 terminated = True
                 reward = 2
             elif self._status == 2:
-                print("\n!! Draw !!")
+                #print("\n!! Draw !!")
                 terminated = True
                 reward = 1
 
@@ -278,7 +276,7 @@ class XO(gym.Env):
                     # Opponent has won
                     terminated = True
                     reward = -1
-                    print("\n!! Computer won !!")
+                    #print("\n!! Computer won !!")
 
             observation = self._get_obs()
             info = self._get_info()
@@ -360,9 +358,10 @@ class XOAgent:
         # What's the best we could do from the next state?
         # (Zero if episode terminated - no future rewards possible)
         logging.debug("Updating Q Values")
-        board = str(next_obs["board"]) #TODO: Tidy this up
+        next_board = str(next_obs["board"]) #TODO: Tidy this up
+        board = str(obs["board"]) #TODO: Tidy this up
         #future_q_value = (not terminated) * np.max(self.q_values[next_obs])
-        future_q_value = (not terminated) * np.max(self.q_values[board])
+        future_q_value = (not terminated) * np.max(self.q_values[next_board])
 
         # What should the Q-value be? (Bellman equation)
         target = reward + self.discount_factor * future_q_value
