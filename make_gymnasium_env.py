@@ -1,13 +1,11 @@
+import logging
+import numpy as np
+import pandas as pd
+from tqdm import tqdm  # Progress bar
 
 import gymnasium as gym
 from gymnasium.utils.env_checker import check_env
-import numpy as np
 from xo import XO, XOAgent
-import pandas as pd
-
-import logging
-
-from tqdm import tqdm  # Progress bar
 
 logging.basicConfig(
     format="{asctime} - {levelname} - {message}",
@@ -17,10 +15,10 @@ logging.basicConfig(
 
 # Training hyperparameters
 learning_rate = 0.01        # How fast to learn (higher = faster but less stable)
-n_episodes = 5000       # Number of games to play
+n_episodes = 1#0000       # Number of games to play
 start_epsilon = 1.0         # Start with 100% random actions
 epsilon_decay = start_epsilon / (n_episodes / 2)  # Reduce exploration over time
-final_epsilon = 0.2         # Always keep some exploration
+final_epsilon = 0.3         # Always keep some exploration
 
 def test_agent(agent, env, num_episodes=100):
     """Test agent performance without learning or exploration."""
@@ -61,7 +59,12 @@ def test_agent(agent, env, num_episodes=100):
     print(f"Bad play Rate: {loss_rate:.1%}")
     print(f"Average Reward: {average_reward:.3f}")
     print(f"Standard Deviation: {np.std(total_rewards):.3f}")
-
+    print("\n")
+    print(f"Learning rate was {learning_rate}")
+    print(f"N episodes was {n_episodes}")
+    print(f"Start epsilon was {start_epsilon}")
+    print(f"Epsilon decay was {epsilon_decay}")
+    print(f"Final epsilon was {final_epsilon}")
 
     
 # Register the environment so we can create it with gym.make()
@@ -110,8 +113,8 @@ agent = XOAgent(
 
 for episode in tqdm(range(n_episodes)):
     # Start a new hand
+    logging.debug("Resetting")
     obs, info = env.reset()
-    logging.debug("Reset")
     done = False
 
     # Play one complete game
@@ -121,7 +124,6 @@ for episode in tqdm(range(n_episodes)):
 
         # Take action and observe result
         next_obs, reward, terminated, truncated, info = env.step(action)
-
 
         # Learn from this experience
         agent.update(obs, action, reward, terminated, next_obs)
@@ -141,8 +143,8 @@ logging.basicConfig(
 
 # Test your agent
 
-test_agent(agent, env, 100)
+test_agent(agent, env, 200)
 
 df = pd.DataFrame(agent.q_values).transpose()
-print(df)
+print(len(df))
 df.to_csv("outfile.csv")
