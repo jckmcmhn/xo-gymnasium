@@ -7,6 +7,7 @@ from xo import make_player_action, make_computer_action, prettify_board, action_
 from collections import defaultdict
 
 map = {"a1": "00", "a2": "01", "a3": "02", "b1": "10", "b2": "11", "b3": "12", "c1": "20", "c2": "21", "c3": "22"}
+reverse_map = {"00": "a1", "01": "a2", "02": "a3", "10": "b1", "11": "b2", "12": "b3", "20": "c1", "21": "c2", "22": "c3"}
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--opponent", help = "what policy to play against", nargs='?', const="rules")
@@ -16,9 +17,7 @@ opponent = args.opponent
 def make_policy_action(state, tn, p):
     
     flat_board = np.array(list(itertools.chain.from_iterable(state)))
-    print(flat_board)
     q_value = q_values.get(str(flat_board),None)
-    print(q_value)
     if q_value is not None:
         if (max(q_value) == 0) and (len(set(q_value)) == 1):
             print(f"{flat_board} agent has no best option for this")
@@ -115,11 +114,14 @@ while turn != 9 and status == 0:
                 valid_action = True    
                 turn += 1
                 state, status = make_player_action(p,state,m,turn)
-                print("That's a valid move")
-                prettify_board(state)
                 if status == True:
+                    print("That's a valid move.")
                     print("\nCongrats! You Won!")
                     winner = p
+                else:
+                    print("That's a valid move. Here is how the board looks now:")
+                    prettify_board(state)
+                    print("-------------------------------------------------------------")
             else:
                 print("Invalid input")
         except (ValueError) as e:
@@ -128,9 +130,14 @@ while turn != 9 and status == 0:
         print("The computer's turn.")
         turn += 1
         state, status, m = opponent_action(state,turn,c)
+        computer_move = reverse_map[str(m[0])+str(m[1])]
+        print(f"The computer made this move {computer_move}")
         if status == True:
             print("\nOh no! The Computer won :(")
             winner = c
+        else:
+            prettify_board(state)
+            print("-------------------------------------------------------------")
 
 if status == 2:
     print("It was a draw")
