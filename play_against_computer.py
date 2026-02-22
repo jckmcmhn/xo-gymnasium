@@ -1,8 +1,9 @@
-from xo import make_player_action, make_computer_action, prettify_board, action_to_move, make_action
+from xo import make_player_action, make_computer_action, prettify_board, action_to_move, make_action, get_possible_actions
 import argparse
 import pandas as pd
 import numpy as np
 import itertools
+import random
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--opponent", help = "what policy to play against", nargs='?', const="rules")
@@ -10,9 +11,16 @@ args = parser.parse_args()
 opponent = args.opponent
 
 def make_policy_action(state, tt, p):
+    
     flat_board = np.array(list(itertools.chain.from_iterable(state)))
-    action = int(np.argmax(q_values[str(flat_board)]))
-    m = action_to_move[action]
+    q_value = q_values.get(str(flat_board),None)
+    if q_value is not None:
+        action = int(np.argmax(q_value))
+        m = action_to_move[action]
+    else:
+        print("Congratulations! You've played a board that the agent has never seen before. The agent will now make a move at random")
+        pm = get_possible_actions(state)
+        m = random.choice(pm)
     state, status = make_action(p,state,m[0],m[1],tt)
     return state, status, m
 
