@@ -200,7 +200,7 @@ def opponent_logic_random(board, o, turn_number, terminated, reward):
     return board, status, m, terminated, reward
 
 def opponent_logic_competitive(board, o, turn_number, terminated, reward):
-    print("competitive mode")
+    logging.debug("competitive mode")
     can_computer_win_or_draw, _ = assess_state(board, o, turn_number, False)
     if can_computer_win_or_draw == 1:
         #print(f"\n!! Computer ({map_p[self._o]}) won !!")
@@ -213,9 +213,17 @@ def opponent_logic_competitive(board, o, turn_number, terminated, reward):
     board, status, m = make_computer_action(board, turn_number, o)
     return board, status, m, terminated, reward
 
+def opponent_logic_semi_competitive(board, o, turn_number, terminated, reward):
+    logging.debug("semi_competitive mode")
+    if random.random() <= 0.05:
+        board, status, m, terminated, reward = opponent_logic_competitive(board, o, turn_number, terminated, reward)
+    else:
+        board, status, m, terminated, reward = opponent_logic_random(board, o, turn_number, terminated, reward)
+    return board, status, m, terminated, reward
+
 class XO(gym.Env):
 
-    def __init__(self):
+    def __init__(self, opponent_logic):
 
         # Define what actions are available (9 squares)
         self.action_space = gym.spaces.Discrete(9)
@@ -227,7 +235,7 @@ class XO(gym.Env):
             }
         )
 
-        self.opponent_logic = opponent_logic_random
+        self.opponent_logic = opponent_logic
 
 
     def _get_obs(self):
@@ -332,7 +340,7 @@ class XO(gym.Env):
             info = self._get_info()
         else:
             # If the agent picked a square that is already taken, give it a negative reward so that it won't do that again and then allow it to try again
-            logging.warning("Agent has picked a square that has already been taken, which shouldn't be possible")
+            #logging.warning("Agent has picked a square that has already been taken, which shouldn't be possible")
             terminated = False
             reward = -2
             observation = self._get_obs()
@@ -389,27 +397,30 @@ class XOAgent:
         board = obs["board"]
         if np.random.random() < self.epsilon:
             logging.debug(f"RANDOM {random.random()}")
-            while valid_action is False:
-                action = self.env.action_space.sample()
-                if board[action] == 0:
-                    logging.debug("This random action is valid")
-                    valid_action = True
-                    return action
-            #return self.env.action_space.sample()
+            #while valid_action is False:
+            #    action = self.env.action_space.sample()
+            #    if board[action] == 0:
+            #        logging.debug("This random action is valid")
+            #        valid_action = True
+            #        return action
+            return self.env.action_space.sample()
 
         # With probability (1-epsilon): exploit (best known action)
         else:
             board_key = str(board)
-            q_values = self.q_values[board_key] #TODO: I think this needs to be a copy, as otherwise the self.q_values table gets updated also, which feels a bit hack
-            logging.debug(f"POLICY {random.random()}")
-            while valid_action is False:
-                action = int(np.argmax(q_values))
-                if board[action] == 0:
-                    valid_action = True
-                    return action
-                else:
-                    q_values[action] = -100
-            #return int(np.argmax(q_values))
+#            q_values = copy.deepcopy(self.q_values[board_key])
+#            #q_values = self.q_values[board_key] #TODO: I think this needs to be a copy, as otherwise the self.q_values table gets updated also, which feels a bit hack
+#            logging.debug(f"POLICY {random.random()}")
+#            while valid_action is False:
+#                action = int(np.argmax(q_values))
+#                if board[action] == 0:
+#                    valid_action = True
+#                    return action
+#                else:
+#                    q_values[action] = -100
+
+            q_values = self.q_values[board_key]
+            return int(np.argmax(q_values))
 
 
     def update(
@@ -429,13 +440,15 @@ class XOAgent:
         logging.debug("Updating Q Values")
         next_board = str(next_obs["board"]) #TODO: Tidy this up
         board = str(obs["board"]) #TODO: Tidy this up
+
         future_q_value = (not terminated) * np.max(self.q_values[next_board])
+        # If terminated, then future_q_value will be 0
 
         # What should the Q-value be? (Bellman equation)
         target = reward + self.discount_factor * future_q_value
+        # If terminated, then target will be the whole reward
 
         # How wrong was our current estimate?
-        #temporal_difference = target - self.q_values[obs][action]
         temporal_difference = target - self.q_values[board][action]
 
         # Update our estimate in the direction of the error
