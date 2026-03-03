@@ -30,6 +30,8 @@ def make_policy_action(state, tn, p):
         print(f"Congratulations! You've played a board {flat_board} that the agent has never seen before. The agent will now make a move at random")
         pm = get_possible_actions(state)
         m = random.choice(pm)
+    if state[m[0]][m[1]] != 0:
+        raise ValueError("Agent picked invalid move")
     state, status = make_action(p,state,m[0],m[1],tn)
     return state, status, m
 
@@ -78,7 +80,7 @@ print("""
 if p == -1:
     turn = 1
     print("You are going first")
-    m = input("Input your move: ")
+    m = input("Input your move: ").lower()
     try:
         if m == "q":
             exit()
@@ -94,6 +96,8 @@ if p == 1:
     turn = 1
     print("The Computer is going first")
     state, status, m = opponent_action(state,turn,-1)
+
+print(f"The computer made this move {m}")
 
 status = False
 winner = 0
@@ -136,7 +140,6 @@ while turn != 9 and status == 0:
             print("\nOh no! The Computer won :(")
             winner = c
         else:
-            prettify_board(state)
             print("-------------------------------------------------------------")
 
 if status == 2:
