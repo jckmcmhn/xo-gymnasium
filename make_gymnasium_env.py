@@ -5,7 +5,8 @@ from tqdm import tqdm  # Progress bar
 
 import gymnasium as gym
 from gymnasium.utils.env_checker import check_env
-from xo import XO, XOAgent
+from xo import XO, XOAgent, opponent_logic_competitive
+from hyperparameters import learning_rate, n_episodes, start_epsilon, epsilon_decay, final_epsilon
 
 logging.basicConfig(
     format="{asctime} - {levelname} - {message}",
@@ -13,12 +14,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M",
     level="INFO")
 
-# Training hyperparameters
-learning_rate = 0.01        # How fast to learn (higher = faster but less stable)
-n_episodes = 30000       # Number of games to play
-start_epsilon = 1.0         # Start with 100% random actions
-epsilon_decay = start_epsilon / (n_episodes / 2)  # Reduce exploration over time
-final_epsilon = 0.3         # Always keep some exploration
 
 def test_agent(agent, env, num_episodes=100):
     """Test agent performance without learning or exploration."""
@@ -122,7 +117,7 @@ for episode in tqdm(range(n_episodes)):
     agent.decay_epsilon()
 
 # Test your agent
-test_agent(agent, env, 400)
+test_agent(agent, env, 2000)
 
 df = pd.DataFrame(agent.q_values).transpose()
 print(len(df))
