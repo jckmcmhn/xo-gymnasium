@@ -186,41 +186,26 @@ def make_computer_action(board: List[List[int]], tn: int, p: int):
     board, status = make_action(p,board,m[0],m[1],tn)
     return board, status, m
 
-def opponent_logic_random(board: List[List[int]], o: int, turn_number: int, terminated:bool, reward: int):
+def opponent_logic_random(board: List[List[int]], o: int, turn_number: int):
     logging.debug("Making random action")
     pm = get_possible_moves(board)
     m = random.choice(pm) # This is the default action
     logging.debug(f"Random action chosen {m}")
     board, status = make_action(o,board,m[0],m[1],turn_number)
-    if status == 1:
-        terminated = True
-        reward = -1
-    if status == 2:
-        terminated = True
-        reward = 1
-    return board, status, m, terminated, reward
+    return board, status, m
 
-def opponent_logic_competitive(board: List[List[int]], o: int, turn_number: int, terminated: bool, reward: int):
+def opponent_logic_competitive(board: List[List[int]], o: int, turn_number: int):
     logging.debug("competitive mode")
-    can_computer_win_or_draw, _ = assess_board(board, o, turn_number, False)
-    if can_computer_win_or_draw == 1:
-        #print(f"\n!! Computer ({map_p[self._o]}) won !!")
-        terminated = True
-        reward = -1
-    if can_computer_win_or_draw == 2:
-        #print(f"\n!! It's a draw !!")
-        terminated = True
-        reward = 1 # The computer played to a draw, which means the agent also played to a draw
     board, status, m = make_computer_action(board, turn_number, o)
-    return board, status, m, terminated, reward
+    return board, status, m
 
-def opponent_logic_semi_competitive(board: List[List[int]], o: int, turn_number: int, terminated: bool, reward: int):
+def opponent_logic_semi_competitive(board: List[List[int]], o: int, turn_number: int):
     logging.debug("semi_competitive mode")
     if random.random() <= 0.05:
-        board, status, m, terminated, reward = opponent_logic_competitive(board, o, turn_number, terminated, reward)
+        board, status, m = opponent_logic_competitive(board, o, turn_number)
     else:
-        board, status, m, terminated, reward = opponent_logic_random(board, o, turn_number, terminated, reward)
-    return board, status, m, terminated, reward
+        board, status, m = opponent_logic_random(board, o, turn_number)
+    return board, status, m
 
 class XO(gym.Env):
 
@@ -339,6 +324,14 @@ class XO(gym.Env):
                 logging.debug(f"Turn {self._turn_number}: Computer ({map_p[self._o]}) has taken this action {m}")
                 if SHOW_BOARD:
                     prettify_board(self._board)
+                if self._status == 1:
+                    logging.debug("Computer has won :(")
+                    terminated = True
+                    reward = -1
+                elif self._status == 2:
+                    logging.debug("Computer has played to a draw :|")
+                    terminated = True
+                    reward = 1
 
             observation = self._get_obs()
             info = self._get_info()
