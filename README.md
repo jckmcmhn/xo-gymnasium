@@ -96,7 +96,7 @@ A later test with the same parameters performed much worse, so maybe there was s
 ### State Vs Board and Actions Vs Moves
 You may notice that the game state is sometimes referred to as the "state" and sometimes referred to as the "board". The actions the user can take are sometimes referred to as "actions" and sometimes referred to as "moves". Why is this?
 
-Most of the game logic in this project is lifted from a previous project where I attempted to build a similar agent to play Xs and Os from scratch. For that project, I described the game state as a list of three lists, corresponding to the rows in the game board. The moves a player could do were given as essentially row/column references to this list of lists. So, the top left corner is 00, the middle square is 11, and the bottom right corner is 22.
+Most of the game logic in this project is lifted from a (previous project)[https://github.com/jckmcmhn/xoxo-gossip-giRL] where I attempted to build a similar agent to play Xs and Os from scratch. For that project, I described the game state as a list of three lists, corresponding to the rows in the game board. The moves a player could do were given as essentially row/column references to this list of lists. So, the top left corner is 00, the middle square is 11, and the bottom right corner is 22.
 
 When I started working on this project, this slightly complicated way of referring to actions did not match the simpler examples I was working with for how the action space is defined so I added an extra layer to convert these "moves" to "actions". So, in this format, the top left corner is 0 the middle square is 4 and the bottom right is 8. Similarly, the "state" is just a flattened version of the "board" converted into a string.
 
