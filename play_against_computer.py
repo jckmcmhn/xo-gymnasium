@@ -3,46 +3,53 @@ import itertools
 import numpy as np
 import pandas as pd
 import random
-from xo import make_player_action, make_computer_action, prettify_board, action_to_move, make_action, get_possible_actions
+from xo import make_player_action, make_computer_action, prettify_board, action_to_move, make_action, get_possible_moves
 from collections import defaultdict
 
 map = {"a1": "00", "a2": "01", "a3": "02", "b1": "10", "b2": "11", "b3": "12", "c1": "20", "c2": "21", "c3": "22"}
 reverse_map = {"00": "a1", "01": "a2", "02": "a3", "10": "b1", "11": "b2", "12": "b3", "20": "c1", "21": "c2", "22": "c3"}
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-o", "--opponent", help = "what policy to play against", nargs='?', const="rules")
+parser.add_argument("-o", "--opponent", help="what policy to play against", default="rules")
+parser.add_argument("-p", "--policy", help="define location of policy", default="outfile.csv")
 args = parser.parse_args()
 opponent = args.opponent
+policy_file = args.policy
 
 def make_policy_action(state, tn, p):
     
     flat_board = np.array(list(itertools.chain.from_iterable(state)))
     q_value = q_values.get(str(flat_board),None)
+    pm = get_possible_moves(state)
     if q_value is not None:
         if (max(q_value) == 0) and (len(set(q_value)) == 1):
-            print(f"{flat_board} agent has no best option for this")
-            pm = get_possible_actions(state)
+            print(f"{flat_board} agent has no best option for this. The agent will now make a move at random.")
             m = random.choice(pm)
         else:
             action = int(np.argmax(q_value))
             m = action_to_move[action]
+            if state[m[0]][m[1]] != 0:
+                print(f"When presented with this board {flat_board} the agent picked an invalid move {m}.") # With sufficient training episodes and exploration, this should not happen
+                print("To continue the game, the agent will now make a random valid move.")
+                m = random.choice(pm) # This will be the agent's default move which should be updated by consulting the policy
     else:
-        print(f"Congratulations! You've played a board {flat_board} that the agent has never seen before. The agent will now make a move at random")
-        pm = get_possible_actions(state)
+        print(f"Congratulations! You've played a board {flat_board} that the agent has never seen before. The agent will now make a move at random.")
         m = random.choice(pm)
-    if state[m[0]][m[1]] != 0:
-        raise ValueError("Agent picked invalid move")
     state, status = make_action(p,state,m[0],m[1],tn)
     return state, status, m
 
 if opponent == "rules":
+    print("You are playing against the traditional rules-based algorithm. Good luck!")
     opponent_action = make_computer_action
 elif opponent == "agent":
-    df = pd.read_csv("outfile.csv", index_col = "Unnamed: 0", float_precision='round_trip')
+    print(f"You are playing against the policy stored in {policy_file}. Good luck!")
+    df = pd.read_csv(policy_file, index_col = "Unnamed: 0", float_precision='round_trip')
     q_values = {}
     for i, row in df.iterrows():
         q_values[i] = row.values
     opponent_action = make_policy_action
+else:
+    raise ValueError("Specify an opponent")
 
 state = [[0,0,0],[0,0,0],[0,0,0]]
 
@@ -97,7 +104,7 @@ if p == 1:
     print("The Computer is going first")
     state, status, m = opponent_action(state,turn,-1)
 
-print(f"The computer made this move {m}")
+print(f"The Computer made this move {m}")
 
 status = False
 winner = 0
@@ -131,11 +138,11 @@ while turn != 9 and status == 0:
         except (ValueError) as e:
             print("An error occurred, try again")
     if turn != 9 and status == 0:
-        print("The computer's turn.")
+        print("The Computer's turn.")
         turn += 1
         state, status, m = opponent_action(state,turn,c)
         computer_move = reverse_map[str(m[0])+str(m[1])]
-        print(f"The computer made this move {computer_move}")
+        print(f"The Computer made this move {computer_move}")
         if status == True:
             print("\nOh no! The Computer won :(")
             winner = c
