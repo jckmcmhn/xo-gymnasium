@@ -1,7 +1,9 @@
 # xo-gymnasium
 In this project I create and train a simple Reinforcement Learning Agent that is able to play the classic pencil-and-paper game "Xs and Os" (which you may know by the name "Tic-Tac-Toe" or "Noughts and Crosses"). To do this, I have created an Xs and Os environment for the [Gymnasium library](https://gymnasium.farama.org/).
 
-To do this I referred extensively to the Gymnasium documentation on building your own [environment](https://gymnasium.farama.org/introduction/create_custom_env/#registering-and-making-the-environment). Much of the agent logic is based on the documentation for [training an agent](https://gymnasium.farama.org/introduction/train_agent/#training-an-agent) from the same source. The [section on Q-Learning](https://huggingface.co/learn/deep-rl-course/en/unit2/introduction) from Hugging Face's Deep RL Course was also very useful for understanding the theory.
+I am aware that this isn't exactly the most novel or groundbreaking idea for a project and is in-fact very well trod ground. But I feel like I still learned a lot from doing it myself so… uh… mind your own business.
+
+I referred extensively to the Gymnasium documentation on building your own [environment](https://gymnasium.farama.org/introduction/create_custom_env/#registering-and-making-the-environment). Much of the agent logic is based on the documentation for [training an agent](https://gymnasium.farama.org/introduction/train_agent/#training-an-agent) from the same source. The [section on Q-Learning](https://huggingface.co/learn/deep-rl-course/en/unit2/introduction) from Hugging Face's Deep RL Course was also very useful for understanding the theory.
 
 My interest in this topic was sparked by a [conference](https://www.aiandgamesconference.com/) I attended last year and a great book called ["Artificial Intelligence: A Guide for Thinking Humans"](https://melaniemitchell.me/aibook/) by Melanie Mitchell, I would recommend checking out both!
 
