@@ -320,7 +320,7 @@ class XO(gym.Env):
             if not terminated:
                 self._turn_number += 1
                 logging.debug(f"Turn {self._turn_number}: Computer ({map_p[self._o]}) is chosing an action")
-                self._board, self._status, m, terminated, reward = self.opponent_logic(self._board, self._o, self._turn_number, terminated, reward)
+                self._board, self._status, m = self.opponent_logic(self._board, self._o, self._turn_number)
                 logging.debug(f"Turn {self._turn_number}: Computer ({map_p[self._o]}) has taken this action {m}")
                 if SHOW_BOARD:
                     prettify_board(self._board)
@@ -418,10 +418,10 @@ class XOAgent:
         # What's the best we could do from the next state?
         # (Zero if episode terminated - no future rewards possible)
         logging.debug("Updating Q Values")
-        next_board = str(next_obs["board"]) #TODO: Tidy this up
-        board = str(obs["board"]) #TODO: Tidy this up
+        next_obs = str(next_obs["board"]) #TODO: Tidy this up
+        obs = str(obs["board"]) #TODO: Tidy this up
 
-        future_q_value = (not terminated) * np.max(self.q_values[next_board])
+        future_q_value = (not terminated) * np.max(self.q_values[next_obs])
         # If terminated, then future_q_value will be 0
 
         # What should the Q-value be? (Bellman equation)
@@ -429,12 +429,12 @@ class XOAgent:
         # If terminated, then target will be the whole reward
 
         # How wrong was our current estimate?
-        temporal_difference = target - self.q_values[board][action]
+        temporal_difference = target - self.q_values[obs][action]
 
         # Update our estimate in the direction of the error
         # Learning rate controls how big steps we take
-        self.q_values[board][action] = (
-            self.q_values[board][action] + self.lr * temporal_difference
+        self.q_values[obs][action] = (
+            self.q_values[obs][action] + self.lr * temporal_difference
         )
 
         # Track learning progress (useful for debugging)

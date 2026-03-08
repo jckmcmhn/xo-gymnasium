@@ -21,7 +21,67 @@ To play against the more traditional game-playing algorithm that the agent is va
 
 This algorithm does not play a "perfect" game everytime but will always play competitively. It will take winning moves and block winning moves for its opponent whenever possible. Otherwise, it picks moves at random.
 
+## Training Your Own Agent
+
+### Creating The Environment And Running
+
+To train your own agent, just run:
+
+``python .\make_gymnasium_env.py``
+
+This script creates the environment and runs the training according to your hyperparameters.
+The resulting policy is written to outfile.csv.
+
+### Setting Hyperparameters
+Just to make it easier to use git diff on the make_gymnasium_env.py script I moved all of the hyperparameters out into their own script.
+
+The rewards are not configured in hyperparameters script at this time. Instead, they are defined in the "step" function of xo.py.
+
+### Environment Difficulty
+You may notice that the environment is defined twice. First, near the start of the script, before training:
+
+``env = gym.make("gymnasium_env/xo-v0", opponent_logic = "random")``
+
+And later, after training but before final testing:
+
+``env = gym.make("gymnasium_env/xo-v0", opponent_logic = "competitive")``
+
+This is to ensure that the right difficulty level is applied for each step. What I've found is that if the agent is trained against the "competitive" computer player then too many possible board combinations are closed off and the agent doesn't learn how to play those positions. As a result, the agent plays quite badly against a human player.
+
+To put some numbers on this: in one test, when the agent trained against the computer where the computer played at random for 30,000 episodes, a total of 129,380 turn start observations were made. Of those, there were 4,315 distinct positions (3.3%).
+
+When the agent trained against the computer where the computer played competitively, 138,681 turn start observations were made. Of those, 2,279 were unique (1.6%). That's over 1,000 possible positions that this version of the agent would just have to guess randomly for.
+
+However, it is still useful to do the final test against the competitive computer player to get a more accurate sense of the policy's performance. For example, in the policy_40_58_2 example described below, the agent won 99.8% of its 500 test matches in the random environment but only 40.4% of its 2000 test matches in the final competitive environment.
+
 ## Other Notes
+
+### Picking invalid moves
+Currently, if the agent picks an invalid move during training, it reveives the same negative reward as it would if it lost the game.
+The episode is not terminated. Instead the computer does not take its turn, the step ends and the agent gets to pick another move using the same state.
+I thought this approach to invalid actions illustrated the concept of reinforcement learning better than just coding the agent not to make invalid moves.
+But now I think this probably doesn't fit in well with how the update function works, so I may change this in future
+
+#### How does this affect max episode steps?
+max_episode_steps is hardcoded as 9. Only agent actions count as steps and the max number of valid actions any player can take is 5. So there is space for these additional learning steps but admittedly not many. This hardcoded value may need to be increased.
+
+### What is policy_40_58_2.csv?
+
+This file is one of the more successful outputs of the training process. It was trained using the following hyperparameters.
+
+learning_rate = 0.1
+n_episodes = 100000
+start_epsilon = 1.0
+epsilon_decay = start_epsilon / (n_episodes / 2)
+final_epsilon = 0.3 
+
+The name refers to the breakdown of how the policy performed during testing
+Win Rate: 40.4%
+Draw Rate: 57.5%
+Bad play Rate: 2.1%
+
+A later test with the same parameters performed much worse, so maybe there was some luck of the draw on this run and the learning rate should be reduced.
+
 ### State Vs Board and Actions Vs Moves
 You may notice that the game state is sometimes referred to as the "state" and sometimes referred to as the "board". The actions the user can take are sometimes referred to as "actions" and sometimes referred to as "moves". Why is this?
 

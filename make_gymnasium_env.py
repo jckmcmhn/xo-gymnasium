@@ -14,7 +14,7 @@ logging.basicConfig(
     level="INFO")
 
 
-def test_agent(agent, env, num_episodes=100):
+def test_agent(agent, env, num_episodes=100, final = False):
     """Test agent performance without learning or exploration."""
     # Based on https://gymnasium.farama.org/introduction/train_agent/#testing-your-trained-agent
     total_rewards = []
@@ -53,6 +53,8 @@ def test_agent(agent, env, num_episodes=100):
     print(f"Average Reward: {average_reward:.3f}")
     print(f"Standard Deviation: {np.std(total_rewards):.3f}")
     print("\n")
+    if not final:
+        return # exit the function early unless this is the final test
     print(f"Learning rate was {learning_rate}")
     print(f"N episodes was {n_episodes}")
     print(f"Start epsilon was {start_epsilon}")
@@ -112,7 +114,7 @@ test_agent(agent, env, 500)
 print("\nTest the agent against a more difficult environment")
 env = gym.make("gymnasium_env/xo-v0", opponent_logic = "competitive")
 
-test_agent(agent, env, 2000)
+test_agent(agent, env, 2000, True)
 
 df = pd.DataFrame(agent.q_values).transpose()
 print(len(df))
