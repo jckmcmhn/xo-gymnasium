@@ -2,9 +2,10 @@ import copy
 import itertools
 import logging
 import numpy as np
+import numpy.typing as npt
 import random
 from collections import defaultdict
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import gymnasium as gym
 
@@ -30,7 +31,7 @@ map_p = {-1: "X", 1: "O", 0: " "}
 
 SHOW_BOARD = False #TODO: This should be a parameter
 
-def prettify_board(state, highlight = ""):
+def prettify_board(board: List[List[int]], highlight: str = "") -> None:
     """
     Docstring for prettify_board
     If you are a UX person or someone who writes a lot of command line utilities:
@@ -46,7 +47,7 @@ def prettify_board(state, highlight = ""):
     print("")
     vert = " -----------" 
     print(vert)
-    for ir, row in enumerate(state):
+    for ir, row in enumerate(board):
         if ir != hlr:
             new = f"| {map_p[row[0]]} | {map_p[row[1]]} | {map_p[row[2]] } |"
         else:
@@ -62,7 +63,7 @@ def prettify_board(state, highlight = ""):
         print(vert)
     print("")
 
-def check_for_winner(b, tn, simulator = False):
+def check_for_winner(b: List[List[int]], tn: int, simulator: bool = False) -> Tuple[int, str]:
     """
     Docstring for check_for_winner
     
@@ -102,55 +103,55 @@ def check_for_winner(b, tn, simulator = False):
         logging.debug(prefix + f"No one has won and it is not a draw")
         return 0, ""
     
-def make_action(p, state, mr, mc, tn):
+def make_action(p: int, board: List[List[int]], mr: int, mc: int, tn: int):
     """
     Docstring for make_action
     
     :param p: Player, either -1 (x) or 1 (o)
-    :param state: The current board. At the start of the game the board will be [[0,0,0],[0,0,0],[0,0,0]]
+    :param board: The current board. At the start of the game the board will be [[0,0,0],[0,0,0],[0,0,0]]
     :param mr: The row of the square the current player wants to take
     :param mc: The column of the square the current player wants to take
-    :param debug: Description
+    :param tn: Turn number
     """
-    state[mr][mc] = p
-    status, description = check_for_winner(state,tn)
-    return state, status
+    board[mr][mc] = p
+    status, _ = check_for_winner(board,tn)
+    return board, status
 
-def get_possible_moves(state):
+def get_possible_moves(board: List[List[int]]) -> List[str]:
     possible_actions = []
-    for ir, row in enumerate(state):
+    for ir, row in enumerate(board):
         for ic, row_x_column in enumerate(row):
             if row_x_column == 0:
                 possible_actions.append([ir,ic])
     return possible_actions
 
-def make_player_action(p,state,m,tn):
+def make_player_action(p: int,board: List[List[int]], m: str, tn: int):
     mr, mc = int(m[0]), int(m[1])
-    state, status = make_action(p, state, mr, mc, tn)
-    return state, status
+    board, status = make_action(p, board, mr, mc, tn)
+    return board, status
    
-def check_for_winning_moves(state, tn, pm, p, simulator = False):
+def check_for_winning_moves(board: List[List[int]], tn: int, pm: List[int], p: int, simulator: bool = False) -> Tuple[int, str, str]:
     logging.debug("Running check for winning moves")
     for m in pm:
         mr, mc = m[0], m[1]
-        spec_state = copy.deepcopy(state)
-        spec_state[mr][mc] = p
+        spec_board = copy.deepcopy(board)
+        spec_board[mr][mc] = p
         simulator = True
-        status, description = check_for_winner(spec_state, tn, simulator)
+        status, description = check_for_winner(spec_board, tn, simulator)
         if status > 0: # Draw or win
             return status, m, description
     return 0, m, ""
 
-def assess_state(state, p, tn, check_both):
+def assess_board(board: List[List[int]], p: int, tn: int, check_both: bool) -> Tuple[int, str]:
     if tn < 4: # No one can win or be one step away from winning before turn 4
         return 0, None
     if p == -1:
         o = 1
     else:
         o = -1
-    pm = get_possible_moves(state)
+    pm = get_possible_moves(board)
     simulator = True
-    status, m, description = check_for_winning_moves(state, tn, pm, p, simulator)
+    status, m, description = check_for_winning_moves(board, tn, pm, p, simulator)
     if status > 0: # Win or draw
         if status == 1:
             logging.debug(f"Found a move for {map_p[p]}: {m} which will deliver a {description} win")
@@ -162,7 +163,7 @@ def assess_state(state, p, tn, check_both):
         if check_both:
             if tn < 9:
                 logging.debug(f"Checking for move to block {map_p[o]}")
-                status, m, description = check_for_winning_moves(state, tn + 1, pm, o, simulator)
+                status, m, description = check_for_winning_moves(board, tn + 1, pm, o, simulator)
                 if status == 1:
                     # Found a move which the opponent could use to win next turn
                     logging.debug(f"Found a move to block {map_p[o]}: {m} which would block a {description} win")
@@ -171,21 +172,21 @@ def assess_state(state, p, tn, check_both):
                     logging.debug(f"Did not find a move to block a win from {map_p[o]}")
             else:
                 logging.debug(f"There is no need to check for blocking moves that {map_p[o]} can use against {map_p[p]} as this is the {tn} turn")
-    logging.debug(f"Assess state for {map_p[o]} has concluded without making a recommendation")
+    logging.debug(f"Assess board for {map_p[o]} has concluded without making a recommendation")
     return 0, None
 
-def make_computer_action(state,tn,p):
+def make_computer_action(board: List[List[int]], tn: int, p: int):
     logging.debug("Making computer action")
-    pm = get_possible_moves(state)
+    pm = get_possible_moves(board)
     m = random.choice(pm) # This is the default action
-    status, new_m = assess_state(state, p, tn, True)
+    status, new_m = assess_board(board, p, tn, True)
     if status > 0:
         m = new_m
     logging.debug(f"Computer action chosen {m}")
-    state, status = make_action(p,state,m[0],m[1],tn)
-    return state, status, m
+    board, status = make_action(p,board,m[0],m[1],tn)
+    return board, status, m
 
-def opponent_logic_random(board, o, turn_number, terminated, reward):
+def opponent_logic_random(board: List[List[int]], o: int, turn_number: int, terminated:bool, reward: int):
     logging.debug("Making random action")
     pm = get_possible_moves(board)
     m = random.choice(pm) # This is the default action
@@ -199,9 +200,9 @@ def opponent_logic_random(board, o, turn_number, terminated, reward):
         reward = 1
     return board, status, m, terminated, reward
 
-def opponent_logic_competitive(board, o, turn_number, terminated, reward):
+def opponent_logic_competitive(board: List[List[int]], o: int, turn_number: int, terminated: bool, reward: int):
     logging.debug("competitive mode")
-    can_computer_win_or_draw, _ = assess_state(board, o, turn_number, False)
+    can_computer_win_or_draw, _ = assess_board(board, o, turn_number, False)
     if can_computer_win_or_draw == 1:
         #print(f"\n!! Computer ({map_p[self._o]}) won !!")
         terminated = True
@@ -213,7 +214,7 @@ def opponent_logic_competitive(board, o, turn_number, terminated, reward):
     board, status, m = make_computer_action(board, turn_number, o)
     return board, status, m, terminated, reward
 
-def opponent_logic_semi_competitive(board, o, turn_number, terminated, reward):
+def opponent_logic_semi_competitive(board: List[List[int]], o: int, turn_number: int, terminated: bool, reward: int):
     logging.debug("semi_competitive mode")
     if random.random() <= 0.05:
         board, status, m, terminated, reward = opponent_logic_competitive(board, o, turn_number, terminated, reward)
@@ -223,7 +224,7 @@ def opponent_logic_semi_competitive(board, o, turn_number, terminated, reward):
 
 class XO(gym.Env):
 
-    def __init__(self, opponent_logic):
+    def __init__(self, opponent_logic: str = "random"):
 
         # Define what actions are available (9 squares)
         self.action_space = gym.spaces.Discrete(9)
@@ -235,7 +236,10 @@ class XO(gym.Env):
             }
         )
 
-        self.opponent_logic = opponent_logic
+        if opponent_logic == "competitive":
+            self.opponent_logic = opponent_logic_competitive
+        else:
+            self.opponent_logic = opponent_logic_random
 
 
     def _get_obs(self):
@@ -289,7 +293,7 @@ class XO(gym.Env):
 
         return observation, info
     
-    def step(self, action):
+    def step(self, action: int):
         """Execute one timestep within the environment.
 
         Args:
@@ -392,7 +396,6 @@ class XOAgent:
         Returns:
             action: 0 (stand) or 1 (hit)
         """
-        valid_action = False
         # With probability epsilon: explore (random action)
         board = obs["board"]
         if np.random.random() < self.epsilon:
@@ -409,11 +412,11 @@ class XOAgent:
 
     def update(
         self,
-        obs: tuple[int, int, bool],
+        obs: npt.ArrayLike,
         action: int,
         reward: float,
         terminated: bool,
-        next_obs: tuple[int, int, bool],
+        next_obs: npt.ArrayLike,
     ):
         """Update Q-value based on experience.
 
