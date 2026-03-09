@@ -52,7 +52,7 @@ This is to ensure that the right difficulty level is applied for each step. What
 
 To put some numbers on this: in one test, when the agent trained against the computer where the computer played at random for 30,000 episodes, a total of 129,380 turn start observations were made. Of those, there were 4,315 distinct positions (3.3%).
 
-When the agent trained against the computer where the computer played competitively, 138,681 turn start observations were made. Of those, 2,279 were unique (1.6%). That is over 1,000 possible positions that this version of the agent would just have to guess randomly for.
+When the agent was trained against the computer where the computer played competitively, 138,681 turn start observations were made. Of those, 2,279 were unique (1.6%). That is over 1,000 possible positions that this version of the agent would just have to guess randomly for.
 
 However, it is still useful to do the final test against the competitive computer player to get a more accurate sense of the policy's performance. For example, in the policy_40_58_2 example described below, the agent won 99.8% of its 500 test matches in the random environment but only 40.4% of its 2000 test matches in the final competitive environment.
 
