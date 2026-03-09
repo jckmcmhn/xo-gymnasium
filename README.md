@@ -37,7 +37,7 @@ The resulting policy is written to outfile.csv.
 ### Setting Hyperparameters
 Just to make it easier to use git diff on the make_gymnasium_env.py script I moved all the hyperparameters out into their own script.
 
-The rewards are not configured in tye hyperparameters script. Instead, they are defined in the "step" function of xo.py. I intend to fix this in the future.
+The rewards are not configured in the hyperparameters script. Instead, they are defined in the "step" function of xo.py. I intend to fix this in the future.
 
 ### Environment Difficulty
 You may notice that the environment is defined twice. First, near the start of the script, before training:
