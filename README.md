@@ -71,7 +71,7 @@ Currently, if the agent picks an invalid move during training, it receives the s
 The episode is not terminated. Instead, the computer does not take its turn, the step ends and the agent gets to pick another move using the same state.
 
 I thought this approach to invalid actions illustrated the concept of reinforcement learning better than just coding the agent not to make invalid moves.
-But now I think this probably does not fit in well with how the update function works, so I may change this in future
+But now I think this probably does not fit in well with how the update function works, so I may change this in future.
 
 #### How does this affect max episode steps?
 max_episode_steps is hardcoded as 9. Only agent actions count as steps and the max number of valid actions any player can take is 5. So there is space for these additional learning steps, but admittedly not many. This hardcoded value may need to be increased.
@@ -80,16 +80,17 @@ max_episode_steps is hardcoded as 9. Only agent actions count as steps and the m
 
 This file is one of the more successful outputs of the training process. It was trained using the following hyperparameters.
 
-learning_rate = 0.1
-n_episodes = 100000
-start_epsilon = 1.0
-epsilon_decay = start_epsilon / (n_episodes / 2)
-final_epsilon = 0.3 
+learning_rate = 0.1  
+n_episodes = 100000  
+start_epsilon = 1.0  
+epsilon_decay = start_epsilon / (n_episodes / 2)  
+final_epsilon = 0.3  
 
-The name refers to the breakdown of how the policy performed during testing
-Win Rate: 40.4%
-Draw Rate: 57.5%
-Bad play Rate: 2.1%
+The name refers to the breakdown of how the policy performed during testing:
+
+Win Rate: 40.4%  
+Draw Rate: 57.5%  
+Bad play Rate: 2.1%  
 
 A later test with the same parameters performed much worse, so maybe there was some luck of the draw on this run and the learning rate should be reduced.
 
